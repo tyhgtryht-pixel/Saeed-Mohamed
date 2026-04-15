@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html b:css='false' b:defaultwidgetversion='2' b:layoutsversion='3' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/atom/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+<head>
+  <meta charset='UTF-8'/>
+  <meta content='width=device-width, initial-scale=1.0' name='viewport'/>
+  <title><data:blog.pageTitle/></title>
+  
+  <!-- PWA & Mobile Meta -->
+  <meta content='#2563eb' name='theme-color'/>
+  <meta content='yes' name='apple-mobile-web-app-capable'/>
+  <meta content='default' name='apple-mobile-web-app-status-bar-style'/>
+  <meta content='نظام إدارة الديون' name='apple-mobile-web-app-title'/>
+  
+  <b:skin><![CDATA[
+    /* Blogger Reset */
+    #header-wrapper, #sidebar-wrapper, .footer-outer, .tabs-outer, .main-cap-top, .comments, .post-footer, .post-labels { display:none !important; }
+    body { margin: 0; padding: 0; background: #f8fafc; font-family: 'Inter', sans-serif; direction: rtl; }
+    .status-msg-wrap { display: none !important; }
+    #root { min-height: 100vh; }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  ]]></b:skin>
+
+  <!-- Fonts -->
+  <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&amp;family=Noto+Sans+Arabic:wght@400;700;900&amp;display=swap' rel='stylesheet'/>
+  
+  <!-- Tailwind CSS (Play CDN) -->
+  <script src='https://cdn.tailwindcss.com'></script>
+  <script>//<![CDATA[
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#2563eb',
+              soft: '#eff6ff',
+            },
+            surface: 'var(--surface)',
+            background: 'var(--background)',
+            border: 'var(--border)',
+            text: {
+              DEFAULT: 'var(--text-main)',
+              dim: 'var(--text-dim)',
+            },
+            success: '#10b981',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            arabic: ['Noto Sans Arabic', 'sans-serif'],
+          },
+        }
+      }
+    }
+  //]]></script>
+
+  <style>
+    :root {
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-dim: #64748b;
+    }
+    .dark {
+      --background: #020617;
+      --surface: #0f172a;
+      --border: #1e293b;
+      --text-main: #f1f5f9;
+      --text-dim: #94a3b8;
+    }
+    body { background-color: var(--background); color: var(--text-main); transition: background-color 0.3s ease; }
+    .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); }
+    input::placeholder { color: var(--text-dim); opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <b:section id='main' showaddelement='no'>
+    <b:widget id='Blog1' locked='true' title='Blog Posts' type='Blog' visible='yes'>
+      <b:includable id='main'>
+        <div id='root'>
+          <div style='display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;'>
+            <div style='text-align: center;'>
+              <div style='border: 4px solid #f3f3f3; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px;'></div>
+              <p id='loading-text'>جاري تحميل نظام إدارة الديون...</p>
+              <div id='error-display' style='color: red; margin-top: 20px; font-size: 14px; display: none; max-width: 80vw; word-break: break-all; padding: 10px; background: #fee2e2; border-radius: 10px;'></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- React & Dependencies -->
+        <script src='https://unpkg.com/react@18/umd/react.production.min.js'></script>
+        <script src='https://unpkg.com/react-dom@18/umd/react-dom.production.min.js'></script>
+        <script src='https://unpkg.com/@babel/standalone/babel.min.js'></script>
+        <script src='https://unpkg.com/lucide@latest'></script>
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'></script>
+
+        <!-- Firebase SDK (Compat Version) -->
+        <script src='https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js'></script>
+        <script src='https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js'></script>
+        <script src='https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js'></script>
+
+        <script type='text/babel'>//<![CDATA[
+          const { useState, useEffect, useRef, useMemo } = React;
+
+          // Firebase Configuration
+          const firebaseConfig = {
+            projectId: "sunlit-segment-470307-f7",
+            appId: "1:959418264422:web:4343a18641c476838bb6a7",
+            apiKey: "AIzaSyB_tprVFg33vOgg2l0941_cil7glyqYYRk",
+            authDomain: "sunlit-segment-470307-f7.firebaseapp.com",
+            storageBucket: "sunlit-segment-470307-f7.firebasestorage.app",
+            messagingSenderId: "959418264422"
+          };
+
+          function App() {
+            const [loading, setLoading] = useState(true);
+            const [user, setUser] = useState(null);
+            const [clients, setClients] = useState([]);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [isDarkMode, setIsDarkMode] = useState(localStorage.getItem('theme') === 'dark');
+            const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+            const [error, setError] = useState(null);
+
+            // Firebase Instances
+            const db = useRef(null);
+            const auth = useRef(null);
+            const googleProvider = useRef(null);
+
+            useEffect(() => {
+              try {
+                if (!firebase.apps.length) {
+                  firebase.initializeApp(firebaseConfig);
+                }
+                db.current = firebase.firestore();
+                auth.current = firebase.auth();
+                googleProvider.current = new firebase.auth.GoogleAuthProvider();
+
+                const unsubscribe = auth.current.onAuthStateChanged((u) => {
+                  setUser(u);
+                  setLoading(false);
+                });
+                return () => unsubscribe();
+              } catch (err) {
+                console.error("Firebase Init Error:", err);
+                setError(err.message);
+                setLoading(false);
+              }
+            }, []);
+
+            useEffect(() => {
+              if (!user || !db.current) return;
+              const unsubscribe = db.current.collection('clients').onSnapshot((snapshot) => {
+                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setClients(data);
+              }, (err) => {
+                console.error("Firestore Error:", err);
+                setError("خطأ في الاتصال بقاعدة البيانات: " + err.message);
+              });
+              return () => unsubscribe();
+            }, [user]);
+
+            useEffect(() => {
+              document.documentElement.classList.toggle('dark', isDarkMode);
+              localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            }, [isDarkMode]);
+
+            useEffect(() => {
+              if (window.lucide) {
+                window.lucide.createIcons();
+              }
+            }, [user, clients, loading, isAddModalOpen]);
+
+            const filteredClients = clients
+              .filter(c => c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+              .sort((a, b) => {
+                const timeA = a.createdAt?.toMillis?.() || (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : Date.now());
+                const timeB = b.createdAt?.toMillis?.() || (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : Date.now());
+                return timeB - timeA;
+              });
+
+            if (error) return (
+              <div className="flex items-center justify-center h-screen bg-background p-4">
+                <div className="bg-red-50 border border-red-200 p-8 rounded-3xl text-center max-w-md">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600 text-2xl">!</div>
+                  <h2 className="text-xl font-bold text-red-800 mb-2">حدث خطأ في النظام</h2>
+                  <p className="text-red-600 text-sm break-all">{error}</p>
+                  <button onClick={() => window.location.reload()} className="mt-6 bg-red-600 text-white px-6 py-2 rounded-xl font-bold">إعادة تحميل</button>
+                </div>
+              </div>
+            );
+
+            if (loading) return (
+              <div className="flex items-center justify-center h-screen bg-background text-text">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="font-arabic font-bold">جاري التحميل...</p>
+                </div>
+              </div>
+            );
+
+            if (!user) {
+              return (
+                <div className="flex items-center justify-center h-screen bg-background p-4">
+                  <div className="bg-surface p-10 rounded-[40px] card-shadow w-full max-w-md text-center border border-border animate-fade-in">
+                    <div className="w-20 h-20 bg-brand/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                      <i data-lucide="factory" className="w-10 h-10 text-brand"></i>
+                    </div>
+                    <h1 className="text-3xl font-black mb-2 font-arabic">نظام إدارة الديون</h1>
+                    <p className="text-text-dim mb-10 font-arabic">سجل دخولك لإدارة حسابات عملائك</p>
+                    <button 
+                      onClick={() => auth.current.signInWithPopup(googleProvider.current)}
+                      className="w-full bg-brand text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+                    >
+                      <i data-lucide="log-in" className="w-5 h-5"></i>
+                      تسجيل الدخول بجوجل
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="min-h-screen pb-24 bg-background text-text transition-colors">
+                {/* Header */}
+                <header className="bg-surface/80 backdrop-blur-md border-b border-border sticky top-0 z-40 px-6 py-4">
+                  <div className="max-w-7xl mx-auto flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center">
+                        <i data-lucide="factory" className="w-6 h-6 text-white"></i>
+                      </div>
+                      <h1 className="text-xl font-black font-arabic hidden sm:block">إدارة الديون</h1>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setIsDarkMode(!isDarkMode)} 
+                        className="p-3 hover:bg-background rounded-2xl transition-colors border border-transparent hover:border-border"
+                      >
+                        {isDarkMode ? <i data-lucide="sun" className="w-5 h-5"></i> : <i data-lucide="moon" className="w-5 h-5"></i>}
+                      </button>
+                      <div className="h-8 w-[1px] bg-border mx-2"></div>
+                      <button 
+                        onClick={() => auth.current.signOut()} 
+                        className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl font-bold transition-all"
+                      >
+                        <span className="hidden sm:inline">خروج</span>
+                        <i data-lucide="log-out" className="w-5 h-5"></i>
+                      </button>
+                    </div>
+                  </div>
+                </header>
+
+                <main className="max-w-7xl mx-auto p-6 space-y-8">
+                  {/* Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-surface p-8 rounded-[32px] card-shadow border border-border animate-fade-in">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center">
+                          <i data-lucide="trending-up" className="w-6 h-6 text-brand"></i>
+                        </div>
+                        <p className="text-text-dim font-bold font-arabic">إجمالي الديون</p>
+                      </div>
+                      <h2 className="text-4xl font-black text-brand">
+                        {clients.reduce((acc, c) => acc + Math.max(0, (c.total || 0) - (c.paid || 0)), 0).toLocaleString()}
+                        <span className="text-sm font-medium text-text-dim mr-2">ج.م</span>
+                      </h2>
+                    </div>
+                    
+                    <div className="bg-surface p-8 rounded-[32px] card-shadow border border-border animate-fade-in" style={{animationDelay: '0.1s'}}>
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+                          <i data-lucide="wallet" className="w-6 h-6 text-emerald-600"></i>
+                        </div>
+                        <p className="text-text-dim font-bold font-arabic">إجمالي التحصيل</p>
+                      </div>
+                      <h2 className="text-4xl font-black text-emerald-600">
+                        {clients.reduce((acc, c) => acc + (c.paid || 0), 0).toLocaleString()}
+                        <span className="text-sm font-medium text-text-dim mr-2">ج.م</span>
+                      </h2>
+                    </div>
+
+                    <div className="bg-surface p-8 rounded-[32px] card-shadow border border-border animate-fade-in" style={{animationDelay: '0.2s'}}>
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center">
+                          <i data-lucide="users" className="w-6 h-6 text-text"></i>
+                        </div>
+                        <p className="text-text-dim font-bold font-arabic">عدد العملاء</p>
+                      </div>
+                      <h2 className="text-4xl font-black">{clients.length}</h2>
+                    </div>
+                  </div>
+
+                  {/* Search & Actions */}
+                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-surface p-4 rounded-[28px] card-shadow border border-border">
+                    <div className="relative w-full sm:max-w-md">
+                      <i data-lucide="search" className="absolute right-4 top-1/2 -translate-y-1/2 text-text-dim w-5 h-5 opacity-40"></i>
+                      <input 
+                        type="text" 
+                        placeholder="ابحث عن عميل..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-background border-2 border-transparent focus:border-brand rounded-2xl py-4 pr-12 pl-4 outline-none transition-all font-arabic"
+                      />
+                    </div>
+                    <button 
+                      onClick={() => setIsAddModalOpen(true)}
+                      className="w-full sm:w-auto bg-brand text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-lg shadow-blue-500/20"
+                    >
+                      <i data-lucide="plus" className="w-5 h-5"></i>
+                      إضافة عميل جديد
+                    </button>
+                  </div>
+
+                  {/* Clients Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredClients.length > 0 ? (
+                      filteredClients.map((client, idx) => {
+                        const remaining = (client.total || 0) - (client.paid || 0);
+                        return (
+                          <div 
+                            key={client.id} 
+                            className="bg-surface p-8 rounded-[36px] card-shadow border border-border group hover:border-brand/30 transition-all animate-fade-in"
+                            style={{animationDelay: (idx * 0.05) + 's'}}
+                          >
+                            <div className="flex justify-between items-start mb-6">
+                              <h3 className="text-2xl font-black font-arabic">{client.name}</h3>
+                              <div className="p-2 bg-background rounded-xl text-text-dim">
+                                <i data-lucide="history" className="w-5 h-5"></i>
+                              </div>
+                            </div>
+                            
+                            <div className="mb-8">
+                              <p className="text-text-dim text-sm font-bold mb-1">المبلغ المتبقي</p>
+                              <div className="text-4xl font-black flex items-baseline gap-2">
+                                {remaining.toLocaleString()}
+                                <span className="text-sm font-medium text-text-dim">ج.م</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="w-full h-3 bg-background rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-brand rounded-full transition-all duration-1000" 
+                                  style={{ width: Math.min(((client.paid || 0) / (client.total || 1)) * 100, 100) + '%' }}
+                                ></div>
+                              </div>
+                              <div className="flex justify-between text-xs font-bold text-text-dim">
+                                <span>محصل: {(client.paid || 0).toLocaleString()}</span>
+                                <span>إجمالي: {(client.total || 0).toLocaleString()}</span>
+                              </div>
+                              <div className="flex gap-3 pt-2">
+                                <button className="flex-1 bg-brand text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all">تحصيل</button>
+                                <button className="flex-1 bg-background border border-border py-4 rounded-2xl font-bold hover:bg-surface transition-all">دين جديد</button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="col-span-full py-20 text-center opacity-50">
+                        <i data-lucide="search" className="w-16 h-16 mx-auto mb-4"></i>
+                        <p className="text-xl font-bold font-arabic">لا توجد نتائج للبحث</p>
+                      </div>
+                    )}
+                  </div>
+                </main>
+
+                {/* Add Client Modal */}
+                {isAddModalOpen && (
+                  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)}></div>
+                    <div className="relative bg-surface w-full max-w-md rounded-[40px] p-8 card-shadow animate-fade-in">
+                      <h3 className="text-2xl font-black mb-6 font-arabic">إضافة عميل جديد</h3>
+                      <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        const name = e.target.name.value;
+                        const total = parseFloat(e.target.total.value);
+                        if (!name || isNaN(total)) return;
+                        try {
+                          await db.current.collection('clients').add({ 
+                            name, 
+                            total, 
+                            paid: 0, 
+                            history: [], 
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+                          });
+                          setIsAddModalOpen(false);
+                        } catch (err) {
+                          alert("خطأ في الحفظ: " + err.message);
+                        }
+                      }} className="space-y-6">
+                        <div>
+                          <label className="block text-sm font-bold mb-2">اسم العميل</label>
+                          <input name="name" required className="w-full bg-background p-4 rounded-2xl outline-none border-2 border-transparent focus:border-brand" placeholder="الاسم بالكامل"/>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold mb-2">إجمالي الدين</label>
+                          <input name="total" type="number" required className="w-full bg-background p-4 rounded-2xl outline-none border-2 border-transparent focus:border-brand" placeholder="0.00"/>
+                        </div>
+                        <button type="submit" className="w-full bg-brand text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20">حفظ العميل</button>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          const root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(<App />);
+        //]]></script>
+      </b:includable>
+    </b:widget>
+  </b:section>
+</body>
+</html>

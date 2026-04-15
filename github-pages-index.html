@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة الديون | GitHub Pages</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="إدارة الديون">
+    
+    <!-- Tailwind CSS & Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
+        
+        :root {
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --brand: #2563eb;
+        }
+
+        body {
+            font-family: 'Noto Sans Arabic', sans-serif;
+            background-color: var(--background);
+            margin: 0;
+            color: #0f172a;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--brand);
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--brand);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- شاشة التحميل -->
+        <div id="loader" class="flex flex-col items-center justify-center h-screen gap-4">
+            <div class="spinner"></div>
+            <p class="font-bold text-blue-600">جاري تشغيل النظام...</p>
+        </div>
+    </div>
+
+    <script>
+        // إعدادات Firebase الخاصة بك
+        const firebaseConfig = {
+            projectId: "sunlit-segment-470307-f7",
+            appId: "1:959418264422:web:4343a18641c476838bb6a7",
+            apiKey: "AIzaSyB_tprVFg33vOgg2l0941_cil7glyqYYRk",
+            authDomain: "sunlit-segment-470307-f7.firebaseapp.com"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        const appDiv = document.getElementById('app');
+        let clients = [];
+        let searchTerm = '';
+
+        // الدوال الأساسية
+        window.login = () => auth.signInWithPopup(provider).catch(err => alert("خطأ: " + err.message));
+        window.logout = () => auth.signOut();
+        window.handleSearch = (e) => {
+            searchTerm = e.value.toLowerCase();
+            renderClients();
+        };
+
+        // مراقبة حالة الدخول
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                renderDashboard(user);
+                db.collection('clients').onSnapshot(snapshot => {
+                    clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateStats();
+                    renderClients();
+                });
+            } else {
+                renderLogin();
+            }
+        });
+
+        function renderLogin() {
+            appDiv.innerHTML = `
+                <div class="flex items-center justify-center h-screen p-4">
+                    <div class="card w-full max-w-md text-center shadow-2xl p-10">
+                        <div class="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 text-white text-4xl shadow-lg shadow-blue-200">🏦</div>
+                        <h1 class="text-3xl font-black mb-2">نظام إدارة الديون</h1>
+                        <p class="text-slate-500 mb-10">سجل دخولك للبدء في إدارة حساباتك</p>
+                        <button onclick="login()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">
+                            <i data-lucide="log-in"></i> دخول بحساب جوجل
+                        </button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderDashboard(user) {
+            appDiv.innerHTML = `
+                <div class="min-h-screen p-4 md:p-8">
+                    <header class="flex justify-between items-center mb-10 max-w-7xl mx-auto">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-md">🏦</div>
+                            <h1 class="text-2xl font-black">إدارة الديون</h1>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="hidden sm:inline font-bold text-slate-600">${user.displayName}</span>
+                            <button onclick="logout()" class="text-red-500 font-bold hover:bg-red-50 px-4 py-2 rounded-xl transition-all border border-transparent hover:border-red-100">خروج</button>
+                        </div>
+                    </header>
+
+                    <div class="max-w-7xl mx-auto space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="stats-container"></div>
+
+                        <div class="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
+                            <div class="relative w-full md:max-w-md">
+                                <i data-lucide="search" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+                                <input type="text" oninput="handleSearch(this)" placeholder="ابحث عن عميل..." class="w-full bg-slate-50 p-4 pr-12 rounded-2xl outline-none border-2 border-transparent focus:border-blue-600 transition-all" />
+                            </div>
+                            <button class="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all">إضافة عميل +</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="clients-list"></div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function updateStats() {
+            const container = document.getElementById('stats-container');
+            if (!container) return;
+            const totalDebt = clients.reduce((a, c) => a + ((c.total || 0) - (c.paid || 0)), 0);
+            const totalPaid = clients.reduce((a, c) => a + (c.paid || 0), 0);
+            
+            container.innerHTML = `
+                <div class="card border-r-8 border-r-blue-600">
+                    <p class="text-slate-500 font-bold mb-1">إجمالي الديون</p>
+                    <h2 class="text-3xl font-black text-blue-600">${totalDebt.toLocaleString()} ج.م</h2>
+                </div>
+                <div class="card border-r-8 border-r-emerald-500">
+                    <p class="text-slate-500 font-bold mb-1">إجمالي المحصل</p>
+                    <h2 class="text-3xl font-black text-emerald-600">${totalPaid.toLocaleString()} ج.م</h2>
+                </div>
+                <div class="card border-r-8 border-r-slate-800">
+                    <p class="text-slate-500 font-bold mb-1">عدد العملاء</p>
+                    <h2 class="text-3xl font-black">${clients.length}</h2>
+                </div>
+            `;
+        }
+
+        function renderClients() {
+            const list = document.getElementById('clients-list');
+            if (!list) return;
+            const filtered = clients.filter(c => c.name && c.name.toLowerCase().includes(searchTerm));
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="col-span-full text-center py-20 opacity-50 font-bold">لا يوجد عملاء بهذا الاسم</div>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(c => `
+                <div class="card">
+                    <div class="flex justify-between items-start mb-6">
+                        <h3 class="text-xl font-black">${c.name}</h3>
+                        <i data-lucide="user" class="text-slate-300"></i>
+                    </div>
+                    <p class="text-slate-500 text-sm font-bold mb-1">المبلغ المتبقي</p>
+                    <p class="text-3xl font-black text-blue-600">${((c.total || 0) - (c.paid || 0)).toLocaleString()} ج.م</p>
+                    <div class="mt-6 pt-6 border-t border-slate-50 flex gap-2">
+                        <button class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all">تحصيل</button>
+                        <button class="flex-1 bg-slate-50 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all">تفاصيل</button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

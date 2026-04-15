@@ -1,0 +1,99 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: clients
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required) - Client name
+//   - total: number (required) - Total debt
+//   - paid: number (required) - Total paid
+//   - history: array of objects (optional) - Transaction history
+//   - createdAt: timestamp (optional) - Creation time
+//   - createdBy: string (optional) - UID of creator
+//
+// Collection: config
+// Document ID: main
+// Fields:
+//   - name: string - Factory name
+//   - info: string - Factory phone/info
+//   - logo: string - Logo URL
+//
+// Collection: settings
+// Document ID: whitelist
+// Fields:
+//   - emails: array of strings - Allowed Google emails
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isWhitelisted() {
+      let whitelist = get(/databases/$(database)/documents/settings/whitelist).data.emails;
+      return request.auth.token.email in whitelist || request.auth.token.email == "saeedmohamed131846@gmail.com";
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "saeedmohamed131846@gmail.com" ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    function isValidClient(data) {
+      return data.keys().hasAll(['name', 'total', 'paid']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.total is number &&
+             data.paid is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Clients Collection
+    match /clients/{clientId} {
+      allow read: if isAuthenticated() && isWhitelisted();
+      allow create: if isAuthenticated() && isWhitelisted() && isValidClient(request.resource.data);
+      allow update: if isAuthenticated() && isWhitelisted() && isValidClient(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Config Document
+    match /config/main {
+      allow read: if true; // Publicly readable for the login screen branding
+      allow write: if isAdmin();
+    }
+
+    // Settings/Whitelist
+    match /settings/whitelist {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Users (Roles)
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

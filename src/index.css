@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "Tajawal", sans-serif;
+  
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-orange-soft: #fff7ed;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-surface: var(--surface);
+  --color-background: var(--background);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-border: var(--border-color);
+
+  /* Standard colors to avoid oklch parsing errors in html2canvas */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  
+  --color-blue-600: #2563eb;
+  --color-emerald-600: #059669;
+
+  --radius-xl: 24px;
+  --radius-md: 16px;
+}
+
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --text-dim: #64748b;
+  --border-color: #e2e8f0;
+  --brand: #2563eb;
+  --brand-soft: #eff6ff;
+  --success: #10b981;
+  --success-soft: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-soft: #fffbeb;
+  --danger: #ef4444;
+  --danger-soft: #fef2f2;
+}
+
+.dark {
+  --background: #0f172a; /* Match Surface */
+  --surface: #0f172a;    /* Navy Blue */
+  --text: #f8fafc;       /* Slate 50 */
+  --text-dim: #94a3b8;   /* Slate 400 */
+  --border-color: rgba(255, 255, 255, 0.08);
+  --brand: #38bdf8;      /* Sky 400 - Brighter for dark mode */
+  --brand-soft: rgba(56, 189, 248, 0.1);
+  --success: #4ade80;    /* Green 400 */
+  --success-soft: rgba(74, 222, 128, 0.1);
+  --warning: #fbbf24;    /* Amber 400 */
+  --warning-soft: rgba(251, 191, 36, 0.1);
+  --danger: #f87171;     /* Red 400 */
+  --danger-soft: rgba(248, 113, 113, 0.1);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text font-sans antialiased transition-colors duration-300;
+    direction: rtl;
+  }
+
+  .card-shadow {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .dark .card-shadow {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 10px 15px -3px rgb(0 0 0 / 0.7);
+  }
+
+  input {
+    @apply bg-surface border-border text-text transition-colors duration-300;
+  }
+}
+
+@media print {
+  /* Hide UI elements */
+  header, main, footer, .no-print, .fixed, .absolute:not(#printable-statement) {
+    display: none !important;
+  }
+
+  /* Reset layout for printing */
+  html, body, #root, #root > div {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  #printable-statement {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: auto !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+  
+  thead {
+    display: table-header-group !important;
+  }
+  
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+  
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px !important;
+    text-align: right !important;
+  }
+}
+
+.glass {
+  @apply bg-surface/80 backdrop-blur-xl border border-border;
+}
+
+.animate-in {
+  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

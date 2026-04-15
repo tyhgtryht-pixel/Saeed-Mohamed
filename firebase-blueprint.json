@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "Client": {
+      "title": "Client",
+      "description": "A client with debt information and payment history",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the client" },
+        "total": { "type": "number", "description": "Total debt amount" },
+        "paid": { "type": "number", "description": "Total amount paid" },
+        "history": {
+          "type": "array",
+          "description": "List of payment transactions",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": { "type": "number" },
+              "user": { "type": "string" },
+              "date": { "type": "string", "format": "date-time" },
+              "type": { "type": "string", "enum": ["payment", "debt"] },
+              "notes": { "type": "string", "description": "Optional notes for the transaction" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["name", "total", "paid"]
+    },
+    "Config": {
+      "title": "App Configuration",
+      "description": "Global settings for the factory",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "info": { "type": "string" }
+      }
+    },
+    "User": {
+      "title": "User",
+      "description": "Custom user for username/password login",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      }
+    },
+    "Whitelist": {
+      "title": "Whitelist",
+      "description": "List of authorized Google emails",
+      "type": "object",
+      "properties": {
+        "emails": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "firestore": {
+    "/clients/{clientId}": {
+      "schema": "Client",
+      "description": "Collection of clients and their debts"
+    },
+    "/config/main": {
+      "schema": "Config",
+      "description": "Global application configuration"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of custom users"
+    },
+    "/settings/whitelist": {
+      "schema": "Whitelist",
+      "description": "Authorized Google accounts"
+    }
+  }
+}
